@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import { DollarSign, AlertCircle } from "lucide-react";
+import { useMemo } from "react";
 
 import { supabase } from "../lib/supabase";
 import type { View, Expense, Person, Category, PayeeType } from "../lib/types";
@@ -13,11 +14,13 @@ import { Dashboard } from "./components/Dashboard";
 import { AddExpense } from "./components/AddExpense";
 import { PeopleView } from "./components/PeopleView";
 import { SettingsView } from "./components/SettingsView";
+import { TransactionsView } from "./components/TransactionsView";
 
 const VIEW_TITLE: Record<View, string> = {
   dashboard: "Visão Geral",
   add: "Registrar Gasto",
   people: "Pessoas",
+  expenses: "Transações",
   settings: "Configurações",
 };
 
@@ -234,6 +237,15 @@ export default function App() {
     [session],
   );
 
+  // ── Filtros ──
+
+  const selectedMonth = "2026-08";
+  const montlhyExpenses = useMemo(() => {
+    return expenses.filter((expense) => {
+      return expense.date.startsWith(selectedMonth);
+    });
+  }, [expenses, selectedMonth]);
+
   // ── CRUD: People ──
   const addPerson = useCallback(
     async (name: string, color: string) => {
@@ -421,6 +433,13 @@ export default function App() {
                 onAdd={addPerson}
                 onDelete={deletePerson}
                 addingPerson={addingPerson}
+              />
+            )}
+            {view === "expenses" && (
+              <TransactionsView
+                expenses={expenses}
+                closingDay={closingDay}
+                people={people}
               />
             )}
             {view === "settings" && (
