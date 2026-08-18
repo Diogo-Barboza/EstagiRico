@@ -1,11 +1,15 @@
 
   # App Finança Pessoal
 
-  This is a code bundle for App Finança Pessoal. The original project is available at https://www.figma.com/design/U5XAi6tOd0iCxGOFJ4Kwws/App-Finan%C3%A7a-Pessoal.
+  Aplicativo para controle de finanças. <br> Experimente aqui: [EstagiRico](https://estagi-rico.vercel.app/)
 
-  ## Running the code
+  ## Manutenção e novas features
 
-  Run `npm i` to install the dependencies.
+  ### Rodar o código
 
-  Run `npm run dev` to start the development server.
+  Rode `npm i` para instalar as dependências.
+
+  Rode `npm run dev` para iniciar o sevidor de desenvolvimento.
+
   
+

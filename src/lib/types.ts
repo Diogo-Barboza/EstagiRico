@@ -1,4 +1,4 @@
-export type View = "dashboard" | "add" | "people" | "settings";
+export type View = "dashboard" | "add" | "people" | "expenses" | "settings";
 
 export type Category =
   | "Food"

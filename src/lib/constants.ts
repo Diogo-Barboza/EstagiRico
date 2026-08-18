@@ -1,5 +1,12 @@
-import { LayoutDashboard, Plus, Users, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  Plus,
+  Users,
+  Settings,
+  ArrowLeftRight,
+} from "lucide-react";
 import type { Category, View } from "./types";
+import { Label } from "recharts";
 
 export const CATEGORIES: Category[] = [
   "Food",
@@ -56,6 +63,7 @@ export const NAV_TABS = [
   { id: "dashboard" as View, icon: LayoutDashboard, label: "Início" },
   { id: "add" as View, icon: Plus, label: "Novo" },
   { id: "people" as View, icon: Users, label: "Pessoas" },
+  { id: "expenses" as View, icon: ArrowLeftRight, label: "Transações" },
   { id: "settings" as View, icon: Settings, label: "Config." },
 ] as const;
 

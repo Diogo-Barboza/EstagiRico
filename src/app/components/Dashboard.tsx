@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Calendar, Receipt, Users, DollarSign } from "lucide-react";
 import { getCurrentCycleDates, isInCycle, fmtCurrency } from "../../lib/utils";
-import { CATEGORIES, CATEGORY_LABELS, CATEGORY_META } from "../../lib/constants";
+import {
+  CATEGORIES,
+  CATEGORY_LABELS,
+  CATEGORY_META,
+} from "../../lib/constants";
 import type { Expense, Person, View } from "../../lib/types";
 import { Avatar } from "./Avatar";
 import { DonutCenter } from "./DonutCenter";

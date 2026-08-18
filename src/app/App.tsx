@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import { DollarSign, AlertCircle } from "lucide-react";
+import { useMemo } from "react";
 
 import { supabase } from "../lib/supabase";
 import type { View, Expense, Person, Category, PayeeType } from "../lib/types";
@@ -13,11 +14,13 @@ import { Dashboard } from "./components/Dashboard";
 import { AddExpense } from "./components/AddExpense";
 import { PeopleView } from "./components/PeopleView";
 import { SettingsView } from "./components/SettingsView";
+import { TransactionsView } from "./components/TransactionsView";
 
 const VIEW_TITLE: Record<View, string> = {
   dashboard: "Visão Geral",
   add: "Registrar Gasto",
   people: "Pessoas",
+  expenses: "Transações",
   settings: "Configurações",
 };
 
@@ -182,6 +185,67 @@ export default function App() {
     [session],
   );
 
+  const deleteExpese = useCallback(
+    async (expenseId: string) => {
+      if (!session?.user?.id) return;
+      try {
+        const { error } = await supabase
+          .from("expenses")
+          .delete()
+          .eq("id", expenseId)
+          .eq("user_id", session.user.id);
+
+        if (error) throw error;
+
+        setExpenses((prev) => prev.filter((item) => item.id !== expenseId));
+      } catch (err) {
+        console.error("Erro ao deletar despesa: ", err);
+        alert("Não foi possível deletar despesa.");
+      }
+    },
+    [session],
+  );
+
+  const updateExpense = useCallback(
+    async (updateExpense: Expense) => {
+      if (!session?.user?.id) return;
+
+      try {
+        const { error } = await supabase
+          .from("expenses")
+          .update({
+            title: updateExpense.title,
+            amount: updateExpense.amount,
+            category: updateExpense.category,
+            date: updateExpense.date,
+          })
+          .eq("id", updateExpense.id)
+          .eq("user_id", session.user.id);
+
+        if (error) throw error;
+
+        setExpenses((prev) =>
+          prev.filter((item) =>
+            item.id === updateExpense.id ? updateExpense : item,
+          ),
+        );
+      } catch (err) {
+        console.log("Não foi possivel atualizar despesa: ", err);
+        alert("Não foi possível atualizar despesa.");
+      }
+    },
+    [session],
+  );
+
+  // ── Filtros ──
+
+  const selectedMonth = "2026-08";
+  const montlhyExpenses = useMemo(() => {
+    return expenses.filter((expense) => {
+      return expense.date.startsWith(selectedMonth);
+    });
+  }, [expenses, selectedMonth]);
+
   // ── CRUD: People ──
   const addPerson = useCallback(
     async (name: string, color: string) => {
@@ -298,7 +362,9 @@ export default function App() {
           <div className="flex items-center gap-2">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(145deg, #7B6FE0, #5A4FC8)" }}
+              style={{
+                background: "linear-gradient(145deg, #7B6FE0, #5A4FC8)",
+              }}
             >
               <DollarSign size={13} color="white" strokeWidth={2.5} />
             </div>
@@ -367,6 +433,13 @@ export default function App() {
                 onAdd={addPerson}
                 onDelete={deletePerson}
                 addingPerson={addingPerson}
+              />
+            )}
+            {view === "expenses" && (
+              <TransactionsView
+                expenses={expenses}
+                closingDay={closingDay}
+                people={people}
               />
             )}
             {view === "settings" && (
