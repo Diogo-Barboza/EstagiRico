@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { ArrowLeft, Calendar, AlertCircle, Check, Loader2 } from "lucide-react";
-import { CATEGORIES, CATEGORY_LABELS, CATEGORY_META } from "../../lib/constants";
+import {
+  CATEGORIES,
+  CATEGORY_LABELS,
+  CATEGORY_META,
+} from "../../lib/constants";
 import { fmtCurrency } from "../../lib/utils";
 import { todayStr } from "../../lib/constants";
 import type { Expense, Person, Category, PayeeType } from "../../lib/types";
@@ -208,9 +212,7 @@ export function AddExpense({
                       borderColor:
                         payeeId === person.id ? person.color : "transparent",
                       background:
-                        payeeId === person.id
-                          ? person.color + "12"
-                          : "#F4F5F8",
+                        payeeId === person.id ? person.color + "12" : "#F4F5F8",
                     }}
                   >
                     <Avatar person={person} size={32} />

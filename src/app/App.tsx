@@ -185,7 +185,7 @@ export default function App() {
     [session],
   );
 
-  const deleteExpese = useCallback(
+  const deleteExpense = useCallback(
     async (expenseId: string) => {
       if (!session?.user?.id) return;
       try {
@@ -225,7 +225,7 @@ export default function App() {
         if (error) throw error;
 
         setExpenses((prev) =>
-          prev.filter((item) =>
+          prev.map((item) =>
             item.id === updateExpense.id ? updateExpense : item,
           ),
         );
@@ -440,6 +440,8 @@ export default function App() {
                 expenses={expenses}
                 closingDay={closingDay}
                 people={people}
+                onUpdateExpense={updateExpense}
+                onDelete={deleteExpense}
               />
             )}
             {view === "settings" && (

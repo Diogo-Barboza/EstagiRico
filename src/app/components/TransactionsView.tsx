@@ -1,19 +1,27 @@
 import { getCurrentCycleDates, isInCycle, fmtCurrency } from "@/lib/utils";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Expense, Person } from "../../lib/types";
 import { CATEGORY_META } from "@/lib/constants";
+import { Pencil } from "lucide-react";
+import { EditExpenseModal } from "./EditExpenseModal";
 
 interface TransactionsViewProps {
   expenses: Expense[];
   closingDay: number;
   people: Person[];
+  onUpdateExpense?: (expense: Expense) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function TransactionsView({
   expenses,
   closingDay,
   people,
+  onUpdateExpense,
+  onDelete,
 }: TransactionsViewProps) {
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
   const cycle = useMemo(() => getCurrentCycleDates(closingDay), [closingDay]);
 
   const cycleExp = useMemo(
@@ -51,7 +59,7 @@ export function TransactionsView({
               return (
                 <div
                   key={exp.id}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-[#FAFAFA] transition-colors"
+                  className="flex items-center gap-3 px-5 py-3 bg-white rounder-2xl gap-3 group hover:bg-[#FAFAFA]"
                 >
                   <div
                     className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0"
@@ -101,12 +109,31 @@ export function TransactionsView({
                       </p>
                     )}
                   </div>
+                  <button
+                    onClick={() => setEditingExpense(exp)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-[#D85F5F] hover:bg-[#FCEAEA] transition-colors opacity-50 group-hover:opacity-100"
+                  >
+                    <Pencil size={14} />
+                  </button>
                 </div>
               );
             })}
           </div>
         </div>
       )}
+      <div className="fixed z-50 bg-black/50">
+        {editingExpense && (
+          <EditExpenseModal
+            expense={editingExpense}
+            onClose={() => setEditingExpense(null)}
+            onSave={(updatedFields) => {
+              onUpdateExpense?.({ ...editingExpense, ...updatedFields });
+              setEditingExpense(null);
+            }}
+            onDelete={onDelete}
+          />
+        )}
+      </div>
     </div>
   );
 }

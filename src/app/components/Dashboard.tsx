@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Calendar, Receipt, Users, DollarSign } from "lucide-react";
+import { Calendar, Receipt, Users } from "lucide-react";
 import { getCurrentCycleDates, isInCycle, fmtCurrency } from "../../lib/utils";
 import {
   CATEGORIES,
@@ -91,7 +91,7 @@ export function Dashboard({
 
   const recent = [...cycleExp]
     .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 6);
+    .slice(0, 3);
 
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -351,9 +351,6 @@ export function Dashboard({
             <p className="text-xs font-semibold text-[#1A1E2D]">
               Transações Recentes
             </p>
-            <span className="text-[10px] text-[#9BA3AF] font-medium">
-              {cycleExp.length} no total
-            </span>
           </div>
           <div className="divide-y divide-[#F4F5F8]">
             {recent.map((exp) => {
