@@ -111,7 +111,7 @@ export function TransactionsView({
                   </div>
                   <button
                     onClick={() => setEditingExpense(exp)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#C8CADB] hover:text-[#D85F5F] hover:bg-[#FCEAEA] transition-colors opacity-0 group-hover:opacity-100"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-[#D85F5F] hover:bg-[#FCEAEA] transition-colors opacity-50 group-hover:opacity-100"
                   >
                     <Pencil size={14} />
                   </button>
