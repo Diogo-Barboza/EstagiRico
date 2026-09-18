@@ -1,6 +1,7 @@
-import { Expense } from "@/lib/types";
-import { use, useState } from "react";
+import { useState } from "react";
 import { CATEGORIES, CATEGORY_LABELS, CATEGORY_META } from "@/lib/constants";
+import type { Expense } from "@/lib/types";
+import { CreditCard } from "lucide-react";
 
 interface EditExpenseModalProps {
   expense: Expense;
@@ -18,22 +19,27 @@ export function EditExpenseModal({
   const [title, setTitle] = useState(expense.title);
   const [category, setCategory] = useState(expense.category);
   const [amount, setAmount] = useState(expense.amount);
+  const [date, setDate] = useState(expense.date);
+
+  const isInstallment =
+    (expense.installmentsCount && expense.installmentsCount > 1) ||
+    /\(\d+\/\d+\)/.test(expense.title);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Montamos o objeto atualizado mantendo o ID original
     onSave({
       ...expense,
       title,
       category,
-      amount: Number(amount), // garantindo que seja number
+      amount: Number(amount),
+      date,
     });
-    onClose(); // fecha o modal após salvar
+    onClose();
   };
 
   const handleDelete = () => {
     const confirm = window.confirm(
-      "Tem certeza que deseja exluir essa despesa?",
+      "Tem certeza que deseja excluir esta despesa?",
     );
     if (confirm) {
       onDelete?.(expense.id);
@@ -42,23 +48,32 @@ export function EditExpenseModal({
   };
 
   return (
-    // 1. Container FIXO que cobre a tela toda (Overlay / Backdrop)
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-      {/* 2. O Cartão do Modal (Conteúdo centralizado) */}
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
-        {/* Cabeçalho */}
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <p className="text-lg font-bold text-[#1A1E2D]">Editar despesa</p>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-bold text-[#1A1E2D]">Editar despesa</p>
+              {isInstallment && (
+                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDEBFC] text-[#6B5FD8]">
+                  <CreditCard size={11} />
+                  Parcelada
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[#9BA3AF]">Altere os detalhes do lançamento</p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold cursor-pointer"
+            className="text-gray-400 hover:text-gray-600 text-xl font-bold cursor-pointer p-1"
           >
             ✕
           </button>
         </div>
 
-        {/* Formulário com os campos */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">
@@ -68,7 +83,7 @@ export function EditExpenseModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 p-2.5 text-sm outline-none focus:border-[#7B6FE0]"
+              className="w-full rounded-xl border border-gray-200 p-2.5 text-sm outline-none focus:border-[#6B5FD8] focus:ring-2 focus:ring-[#6B5FD820]"
               required
             />
           </div>
@@ -77,8 +92,6 @@ export function EditExpenseModal({
             <label className="block text-xs font-semibold text-gray-500 mb-1">
               Categoria
             </label>
-
-            {/* Grid com 3 colunas no mobile e 6 colunas em telas maiores */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 p-1 rounded-xl border border-gray-200 bg-gray-50/50">
               {CATEGORIES.map((cat) => {
                 const m = CATEGORY_META[cat];
@@ -108,32 +121,45 @@ export function EditExpenseModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              Valor (R$)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full rounded-xl border border-gray-200 p-2.5 text-sm outline-none focus:border-[#7B6FE0]"
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Valor (R$)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                className="w-full rounded-xl border border-gray-200 p-2.5 text-sm outline-none focus:border-[#6B5FD8] focus:ring-2 focus:ring-[#6B5FD820]"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Data
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 p-2.5 text-sm outline-none focus:border-[#6B5FD8] focus:ring-2 focus:ring-[#6B5FD820]"
+                required
+              />
+            </div>
           </div>
 
-          {/* Botões de Ação */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            {/* Ação Destrutiva (Esquerda) */}
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100 gap-2">
             <button
               type="button"
               onClick={handleDelete}
               className="text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-xl transition-colors cursor-pointer"
             >
-              Excluir despesa
+              Excluir
             </button>
 
-            {/* Ações Primárias (Direita) */}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -144,7 +170,7 @@ export function EditExpenseModal({
               </button>
               <button
                 type="submit"
-                className="rounded-xl bg-[#7B6FE0] px-4 py-2 text-sm font-medium text-white hover:bg-[#685bc7] cursor-pointer"
+                className="rounded-xl bg-[#6B5FD8] px-4 py-2 text-sm font-medium text-white hover:bg-[#5A4EC4] transition-colors cursor-pointer"
               >
                 Salvar
               </button>

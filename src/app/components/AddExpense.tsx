@@ -1,22 +1,30 @@
 import { useState } from "react";
-import { ArrowLeft, Calendar, AlertCircle, Check, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  AlertCircle,
+  Check,
+  Loader2,
+  CreditCard,
+} from "lucide-react";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
   CATEGORY_META,
+  todayStr,
 } from "../../lib/constants";
-import { fmtCurrency } from "../../lib/utils";
-import { todayStr } from "../../lib/constants";
+import { fmtCurrency, addMonthsToDate } from "../../lib/utils";
 import type { Expense, Person, Category, PayeeType } from "../../lib/types";
 import { Avatar } from "./Avatar";
-import { Dropdown } from "./Dropdown";
 
 interface AddExpenseProps {
   people: Person[];
-  onSave: (e: Omit<Expense, "id">) => void;
+  onSave: (e: Omit<Expense, "id"> | Omit<Expense, "id">[]) => void;
   onCancel: () => void;
   saving: boolean;
 }
+
+const INSTALLMENT_OPTIONS = [1, 2, 3, 4, 5, 6, 10, 12];
 
 export function AddExpense({
   people,
@@ -30,6 +38,10 @@ export function AddExpense({
   const [date, setDate] = useState(todayStr);
   const [payeeType, setPayeeType] = useState<PayeeType>("me");
   const [payeeId, setPayeeId] = useState(people[0]?.id || "");
+  const [installments, setInstallments] = useState(1);
+  const [installmentMode, setInstallmentMode] = useState<
+    "total" | "installment"
+  >("total");
   const [focused, setFocused] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -40,20 +52,53 @@ export function AddExpense({
     (payeeType === "me" || (payeeType === "third-party" && payeeId));
   const meta = CATEGORY_META[category];
 
+  // Calculated values for installments
+  const perInstallmentAmount =
+    isValid && installments > 1
+      ? installmentMode === "total"
+        ? amtNum / installments
+        : amtNum
+      : amtNum;
+
+  const totalAmount =
+    isValid && installments > 1
+      ? installmentMode === "total"
+        ? amtNum
+        : amtNum * installments
+      : amtNum;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid || saving) return;
     const finalTitle = title.trim() || CATEGORY_LABELS[category];
     const finalDate = date || todayStr;
     setSaved(true);
-    onSave({
-      title: finalTitle,
-      amount: amtNum,
-      category,
-      date: finalDate,
-      payeeType,
-      payeeId: payeeType === "third-party" ? payeeId : undefined,
-    });
+
+    if (installments === 1) {
+      onSave({
+        title: finalTitle,
+        amount: amtNum,
+        category,
+        date: finalDate,
+        payeeType,
+        payeeId: payeeType === "third-party" ? payeeId : undefined,
+      });
+    } else {
+      const items: Omit<Expense, "id">[] = [];
+      for (let i = 0; i < installments; i++) {
+        items.push({
+          title: `${finalTitle} (${i + 1}/${installments})`,
+          amount: Math.round(perInstallmentAmount * 100) / 100,
+          category,
+          date: addMonthsToDate(finalDate, i),
+          payeeType,
+          payeeId: payeeType === "third-party" ? payeeId : undefined,
+          installmentsCount: installments,
+          installmentNumber: i + 1,
+        });
+      }
+      onSave(items);
+    }
   }
 
   return (
@@ -85,7 +130,7 @@ export function AddExpense({
         >
           <div className="px-6 pt-5 pb-2 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9BA3AF] mb-4">
-              Valor
+              Valor {installments > 1 ? (installmentMode === "total" ? "(Total)" : "(Por Parcela)") : ""}
             </p>
             <div className="flex items-center justify-center gap-1">
               <span className="text-2xl font-light text-[#C8CADB] mt-1">
@@ -107,6 +152,7 @@ export function AddExpense({
               />
             </div>
           </div>
+
           {/* Category quick strip */}
           <div className="flex border-t border-[#F4F5F8] mt-2">
             {CATEGORIES.map((cat) => {
@@ -122,7 +168,7 @@ export function AddExpense({
                 >
                   <span style={{ fontSize: 16 }}>{m.icon}</span>
                   <span
-                    className="text-[9px] font-semibold"
+                    className="text-[9px] font-semibold truncate px-0.5"
                     style={{ color: sel ? m.color : "#C8CADB" }}
                   >
                     {CATEGORY_LABELS[cat]}
@@ -131,6 +177,84 @@ export function AddExpense({
               );
             })}
           </div>
+        </div>
+
+        {/* Installments Section */}
+        <div className="bg-white rounded-2xl border border-[#EDEEF5] p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard size={15} className="text-[#6B5FD8]" />
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9BA3AF]">
+                Forma de Pagamento
+              </p>
+            </div>
+            {installments > 1 && isValid && (
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-[#EDEBFC] text-[#6B5FD8]">
+                {installments}x de {fmtCurrency(perInstallmentAmount)}
+              </span>
+            )}
+          </div>
+
+          {/* Mode Toggle: Total vs Per Installment */}
+          <div className="flex gap-2 mb-3 p-1 bg-[#F4F5F8] rounded-xl text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setInstallmentMode("total")}
+              className={`flex-1 py-2 rounded-lg transition-all ${
+                installmentMode === "total"
+                  ? "bg-white text-[#1A1E2D] shadow-xs"
+                  : "text-[#9BA3AF]"
+              }`}
+            >
+              Valor Total da Compra
+            </button>
+            <button
+              type="button"
+              onClick={() => setInstallmentMode("installment")}
+              className={`flex-1 py-2 rounded-lg transition-all ${
+                installmentMode === "installment"
+                  ? "bg-white text-[#1A1E2D] shadow-xs"
+                  : "text-[#9BA3AF]"
+              }`}
+            >
+              Valor por Parcela
+            </button>
+          </div>
+
+          {/* Chips grid */}
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            {INSTALLMENT_OPTIONS.map((num) => {
+              const sel = installments === num;
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setInstallments(num)}
+                  className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all border-2 ${
+                    sel
+                      ? "border-[#6B5FD8] bg-[#EDEBFC] text-[#6B5FD8]"
+                      : "border-transparent bg-[#F4F5F8] text-[#7B7F94] hover:bg-[#EAECEF]"
+                  }`}
+                >
+                  {num === 1 ? "À vista" : `${num}x`}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Installment Summary preview */}
+          {isValid && installments > 1 && (
+            <div className="mt-3 p-3 rounded-xl bg-[#FAFAFC] border border-[#EDEEF5] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+              <span className="text-[#7B7F94]">Resumo do parcelamento:</span>
+              <span
+                className="font-bold text-[#1A1E2D]"
+                style={{ fontFamily: "DM Mono, monospace" }}
+              >
+                {installments}x de {fmtCurrency(perInstallmentAmount)} · Total:{" "}
+                {fmtCurrency(totalAmount)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Title + Date */}
@@ -152,7 +276,7 @@ export function AddExpense({
           </div>
           <div>
             <label className="text-[10px] font-semibold uppercase tracking-widest text-[#9BA3AF] block mb-2">
-              Data
+              Data da 1ª Parcela / Compra
             </label>
             <div className="relative">
               <Calendar
@@ -242,7 +366,9 @@ export function AddExpense({
           {saving && <Loader2 size={16} className="animate-spin" />}
           {saved && !saving
             ? "✓ Salvo!"
-            : `Adicionar ${isValid ? fmtCurrency(amtNum) : ""} Gasto`}
+            : `Adicionar ${isValid ? fmtCurrency(totalAmount) : ""} Gasto${
+                installments > 1 ? ` (${installments}x)` : ""
+              }`}
         </button>
       </form>
     </div>

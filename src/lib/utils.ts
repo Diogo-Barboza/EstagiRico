@@ -75,3 +75,74 @@ export function isInCycle(dateStr: string, start: Date, end: Date) {
 export function getInitial(name: string) {
   return name.charAt(0).toUpperCase();
 }
+
+export interface CycleInfo {
+  startDate: Date;
+  endDate: Date;
+  label: string;
+  daysTotal: number;
+  daysElapsed: number;
+  daysLeft: number;
+  offset: number;
+  displayName: string;
+}
+
+export function getCycleByOffset(
+  closingDay: number,
+  offsetMonths: number = 0,
+  referenceDate: Date = new Date(),
+): CycleInfo {
+  const ref = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth() + offsetMonths,
+    Math.min(referenceDate.getDate(), 28),
+  );
+  const cycle = getCurrentCycleDates(closingDay, ref);
+
+  let displayName = cycle.label;
+  if (offsetMonths === 0) {
+    displayName = `Ciclo Atual (${cycle.label})`;
+  } else if (offsetMonths === -1) {
+    displayName = `Ciclo Passado (${cycle.label})`;
+  } else if (offsetMonths < -1) {
+    displayName = `${Math.abs(offsetMonths)} ciclos atrás (${cycle.label})`;
+  } else if (offsetMonths === 1) {
+    displayName = `Próximo Ciclo (${cycle.label})`;
+  } else {
+    displayName = `Em +${offsetMonths} ciclos (${cycle.label})`;
+  }
+
+  return {
+    ...cycle,
+    offset: offsetMonths,
+    displayName,
+  };
+}
+
+export function getCycleOptions(
+  closingDay: number,
+  pastCount: number = 6,
+  futureCount: number = 0,
+): CycleInfo[] {
+  const options: CycleInfo[] = [];
+  for (let i = futureCount; i >= -pastCount; i--) {
+    options.push(getCycleByOffset(closingDay, i));
+  }
+  return options;
+}
+
+export function addMonthsToDate(dateStr: string, months: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return dateStr;
+
+  const targetYear = y + Math.floor((m - 1 + months) / 12);
+  const targetMonth = (((m - 1 + months) % 12) + 12) % 12 + 1;
+
+  const maxDay = new Date(targetYear, targetMonth, 0).getDate();
+  const targetDay = Math.min(d, maxDay);
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${targetYear}-${pad(targetMonth)}-${pad(targetDay)}`;
+}
+
+

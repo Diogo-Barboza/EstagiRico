@@ -61,18 +61,33 @@ export default function App() {
 
   // ── Fetch all data on login ──
   const fetchAllData = useCallback(
-    async (userId: string) => {
-      setDataLoading(true);
+    async (userId: string, isInitial = false) => {
+      if (isInitial) setDataLoading(true);
       setDataError(null);
       try {
-        // Fetch or create profile
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("closing_day, monthly_budget")
-          .eq("id", userId)
-          .single();
+        const [profileRes, peopleRes, expensesRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("closing_day, monthly_budget")
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("people")
+            .select("id, name, color")
+            .eq("user_id", userId)
+            .order("name"),
+          supabase
+            .from("expenses")
+            .select("id, title, amount, category, date, payee_type, payee_id")
+            .eq("user_id", userId)
+            .order("date", { ascending: false }),
+        ]);
 
-        if (profileError && profileError.code === "PGRST116") {
+        if (profileRes.error) throw profileRes.error;
+        if (peopleRes.error) throw peopleRes.error;
+        if (expensesRes.error) throw expensesRes.error;
+
+        if (!profileRes.data) {
           await supabase.from("profiles").insert({
             id: userId,
             email: session?.user?.email || "",
@@ -81,39 +96,21 @@ export default function App() {
           });
           setClosingDay(25);
           setBudget(1800);
-        } else if (profileError) {
-          throw profileError;
-        } else if (profileData) {
-          setClosingDay(profileData.closing_day ?? 25);
-          setBudget(profileData.monthly_budget ?? 1800);
+        } else {
+          setClosingDay(profileRes.data.closing_day ?? 25);
+          setBudget(profileRes.data.monthly_budget ?? 1800);
         }
 
-        // Fetch people
-        const { data: peopleData, error: peopleError } = await supabase
-          .from("people")
-          .select("id, name, color")
-          .eq("user_id", userId)
-          .order("name");
-
-        if (peopleError) throw peopleError;
         setPeople(
-          (peopleData || []).map((p) => ({
+          (peopleRes.data || []).map((p) => ({
             id: p.id,
             name: p.name,
             color: p.color,
           })),
         );
 
-        // Fetch expenses
-        const { data: expensesData, error: expensesError } = await supabase
-          .from("expenses")
-          .select("id, title, amount, category, date, payee_type, payee_id")
-          .eq("user_id", userId)
-          .order("date", { ascending: false });
-
-        if (expensesError) throw expensesError;
         setExpenses(
-          (expensesData || []).map((e) => ({
+          (expensesRes.data || []).map((e) => ({
             id: e.id,
             title: e.title,
             amount: Number(e.amount),
@@ -130,49 +127,53 @@ export default function App() {
         setDataLoading(false);
       }
     },
-    [session],
+    [session?.user?.email],
   );
 
   useEffect(() => {
     if (session?.user?.id) {
-      fetchAllData(session.user.id);
+      fetchAllData(session.user.id, true);
     }
   }, [session?.user?.id, fetchAllData]);
 
   // ── CRUD: Expenses ──
   const addExpense = useCallback(
-    async (expense: Omit<Expense, "id">) => {
+    async (expenseData: Omit<Expense, "id"> | Omit<Expense, "id">[]) => {
       if (!session?.user?.id) return;
       setSavingExpense(true);
       try {
+        const itemsToInsert = Array.isArray(expenseData)
+          ? expenseData
+          : [expenseData];
+
+        const rows = itemsToInsert.map((item) => ({
+          user_id: session.user.id,
+          title: item.title,
+          amount: item.amount,
+          category: item.category,
+          date: item.date,
+          payee_type: item.payeeType,
+          payee_id: item.payeeId || null,
+        }));
+
         const { data, error } = await supabase
           .from("expenses")
-          .insert({
-            user_id: session.user.id,
-            title: expense.title,
-            amount: expense.amount,
-            category: expense.category,
-            date: expense.date,
-            payee_type: expense.payeeType,
-            payee_id: expense.payeeId || null,
-          })
-          .select("id, title, amount, category, date, payee_type, payee_id")
-          .single();
+          .insert(rows)
+          .select("id, title, amount, category, date, payee_type, payee_id");
 
         if (error) throw error;
-        if (data) {
-          setExpenses((prev) => [
-            {
-              id: data.id,
-              title: data.title,
-              amount: Number(data.amount),
-              category: data.category as Category,
-              date: data.date,
-              payeeType: data.payee_type as PayeeType,
-              payeeId: data.payee_id || undefined,
-            },
-            ...prev,
-          ]);
+
+        if (data && data.length > 0) {
+          const createdExpenses: Expense[] = data.map((e) => ({
+            id: e.id,
+            title: e.title,
+            amount: Number(e.amount),
+            category: e.category as Category,
+            date: e.date,
+            payeeType: e.payee_type as PayeeType,
+            payeeId: e.payee_id || undefined,
+          }));
+          setExpenses((prev) => [...createdExpenses, ...prev]);
         }
         setView("dashboard");
       } catch (err: any) {
@@ -440,6 +441,7 @@ export default function App() {
                 expenses={expenses}
                 closingDay={closingDay}
                 people={people}
+                budget={budget}
                 onUpdateExpense={updateExpense}
                 onDelete={deleteExpense}
               />

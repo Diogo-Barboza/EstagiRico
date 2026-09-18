@@ -24,6 +24,9 @@ export interface Expense {
   date: string;
   payeeType: PayeeType;
   payeeId?: string;
+  installmentsCount?: number;
+  installmentNumber?: number;
+  installmentGroupId?: string;
 }
 
 export interface Profile {
