@@ -24,7 +24,7 @@ interface AddExpenseProps {
   saving: boolean;
 }
 
-const INSTALLMENT_OPTIONS = [1, 2, 3, 4, 5, 6, 10, 12];
+const QUICK_INSTALLMENTS = [1, 2, 3, 6];
 
 export function AddExpense({
   people,
@@ -39,6 +39,7 @@ export function AddExpense({
   const [payeeType, setPayeeType] = useState<PayeeType>("me");
   const [payeeId, setPayeeId] = useState(people[0]?.id || "");
   const [installments, setInstallments] = useState(1);
+  const [isCustom, setIsCustom] = useState(false);
   const [installmentMode, setInstallmentMode] = useState<
     "total" | "installment"
   >("total");
@@ -221,16 +222,19 @@ export function AddExpense({
             </button>
           </div>
 
-          {/* Chips grid */}
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            {INSTALLMENT_OPTIONS.map((num) => {
-              const sel = installments === num;
+          {/* Quick chips grid */}
+          <div className="grid grid-cols-5 gap-2">
+            {QUICK_INSTALLMENTS.map((num) => {
+              const sel = !isCustom && installments === num;
               return (
                 <button
                   key={num}
                   type="button"
-                  onClick={() => setInstallments(num)}
-                  className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all border-2 ${
+                  onClick={() => {
+                    setInstallments(num);
+                    setIsCustom(false);
+                  }}
+                  className={`py-2.5 px-1 rounded-xl text-xs font-semibold transition-all border-2 ${
                     sel
                       ? "border-[#6B5FD8] bg-[#EDEBFC] text-[#6B5FD8]"
                       : "border-transparent bg-[#F4F5F8] text-[#7B7F94] hover:bg-[#EAECEF]"
@@ -240,7 +244,66 @@ export function AddExpense({
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => {
+                setIsCustom(true);
+                if (QUICK_INSTALLMENTS.includes(installments)) {
+                  setInstallments(10);
+                }
+              }}
+              className={`py-2.5 px-1 rounded-xl text-xs font-semibold transition-all border-2 ${
+                isCustom
+                  ? "border-[#6B5FD8] bg-[#EDEBFC] text-[#6B5FD8]"
+                  : "border-transparent bg-[#F4F5F8] text-[#7B7F94] hover:bg-[#EAECEF]"
+              }`}
+            >
+              Outro...
+            </button>
           </div>
+
+          {/* Custom installment input */}
+          {isCustom && (
+            <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl bg-[#FAFAFC] border border-[#EDEEF5]">
+              <span className="text-xs font-semibold text-[#1A1E2D]">
+                Quantidade de parcelas:
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setInstallments((prev) => Math.max(1, prev - 1))
+                  }
+                  className="w-8 h-8 rounded-lg bg-white border border-[#E8E9F2] text-[#1A1E2D] font-bold text-sm hover:bg-[#EAECEF] active:scale-95 transition-all shadow-xs"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={installments}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setInstallments(
+                      isNaN(val) || val < 1 ? 1 : Math.min(val, 99),
+                    );
+                  }}
+                  className="w-16 py-1 text-center font-bold text-sm bg-white rounded-lg border border-[#E8E9F2] text-[#1A1E2D] outline-none focus:border-[#6B5FD8]"
+                  style={{ fontFamily: "DM Mono, monospace" }}
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setInstallments((prev) => Math.min(99, prev + 1))
+                  }
+                  className="w-8 h-8 rounded-lg bg-white border border-[#E8E9F2] text-[#1A1E2D] font-bold text-sm hover:bg-[#EAECEF] active:scale-95 transition-all shadow-xs"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Installment Summary preview */}
           {isValid && installments > 1 && (
