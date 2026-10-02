@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CATEGORIES, CATEGORY_LABELS, CATEGORY_META } from "@/lib/constants";
+import { parseInstallmentTitle } from "@/lib/utils";
 import type { Expense } from "@/lib/types";
 import { CreditCard } from "lucide-react";
 
@@ -21,8 +22,10 @@ export function EditExpenseModal({
   const [amount, setAmount] = useState(expense.amount);
   const [date, setDate] = useState(expense.date);
 
+  const parsed = parseInstallmentTitle(expense.title);
   const isInstallment =
-    (expense.installmentsCount && expense.installmentsCount > 1) ||
+    Boolean(parsed) ||
+    Boolean(expense.installmentsCount && expense.installmentsCount > 1) ||
     /\(\d+\/\d+\)/.test(expense.title);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,9 +41,14 @@ export function EditExpenseModal({
   };
 
   const handleDelete = () => {
-    const confirm = window.confirm(
-      "Tem certeza que deseja excluir esta despesa?",
-    );
+    const confirmMsg =
+      parsed && parsed.installmentNumber < parsed.installmentsCount
+        ? `Esta despesa é parcelada (${parsed.installmentNumber}/${parsed.installmentsCount}). Ao excluir, esta parcela e todas as dos meses seguintes também serão excluídas. Deseja continuar?`
+        : isInstallment
+          ? "Tem certeza que deseja excluir esta despesa e as parcelas dos meses seguintes?"
+          : "Tem certeza que deseja excluir esta despesa?";
+
+    const confirm = window.confirm(confirmMsg);
     if (confirm) {
       onDelete?.(expense.id);
       onClose();
@@ -58,7 +66,9 @@ export function EditExpenseModal({
               {isInstallment && (
                 <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDEBFC] text-[#6B5FD8]">
                   <CreditCard size={11} />
-                  Parcelada
+                  {parsed
+                    ? `Parcela ${parsed.installmentNumber}/${parsed.installmentsCount}`
+                    : "Parcelada"}
                 </span>
               )}
             </div>

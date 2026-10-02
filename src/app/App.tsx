@@ -5,6 +5,10 @@ import { useMemo } from "react";
 
 import { supabase } from "../lib/supabase";
 import type { View, Expense, Person, Category, PayeeType } from "../lib/types";
+import {
+  parseInstallmentTitle,
+  getRelatedFollowingInstallmentIds,
+} from "../lib/utils";
 
 import { LoadingScreen } from "./components/LoadingScreen";
 import { AuthScreen } from "./components/AuthScreen";
@@ -110,15 +114,20 @@ export default function App() {
         );
 
         setExpenses(
-          (expensesRes.data || []).map((e) => ({
-            id: e.id,
-            title: e.title,
-            amount: Number(e.amount),
-            category: e.category as Category,
-            date: e.date,
-            payeeType: e.payee_type as PayeeType,
-            payeeId: e.payee_id || undefined,
-          })),
+          (expensesRes.data || []).map((e) => {
+            const parsed = parseInstallmentTitle(e.title);
+            return {
+              id: e.id,
+              title: e.title,
+              amount: Number(e.amount),
+              category: e.category as Category,
+              date: e.date,
+              payeeType: e.payee_type as PayeeType,
+              payeeId: e.payee_id || undefined,
+              installmentsCount: parsed?.installmentsCount,
+              installmentNumber: parsed?.installmentNumber,
+            };
+          }),
         );
       } catch (err: any) {
         console.error("Error fetching data:", err);
@@ -164,15 +173,20 @@ export default function App() {
         if (error) throw error;
 
         if (data && data.length > 0) {
-          const createdExpenses: Expense[] = data.map((e) => ({
-            id: e.id,
-            title: e.title,
-            amount: Number(e.amount),
-            category: e.category as Category,
-            date: e.date,
-            payeeType: e.payee_type as PayeeType,
-            payeeId: e.payee_id || undefined,
-          }));
+          const createdExpenses: Expense[] = data.map((e) => {
+            const parsed = parseInstallmentTitle(e.title);
+            return {
+              id: e.id,
+              title: e.title,
+              amount: Number(e.amount),
+              category: e.category as Category,
+              date: e.date,
+              payeeType: e.payee_type as PayeeType,
+              payeeId: e.payee_id || undefined,
+              installmentsCount: parsed?.installmentsCount,
+              installmentNumber: parsed?.installmentNumber,
+            };
+          });
           setExpenses((prev) => [...createdExpenses, ...prev]);
         }
         setView("dashboard");
@@ -190,21 +204,28 @@ export default function App() {
     async (expenseId: string) => {
       if (!session?.user?.id) return;
       try {
+        const targetExpense = expenses.find((e) => e.id === expenseId);
+        const idsToDelete = targetExpense
+          ? getRelatedFollowingInstallmentIds(targetExpense, expenses)
+          : [expenseId];
+
         const { error } = await supabase
           .from("expenses")
           .delete()
-          .eq("id", expenseId)
+          .in("id", idsToDelete)
           .eq("user_id", session.user.id);
 
         if (error) throw error;
 
-        setExpenses((prev) => prev.filter((item) => item.id !== expenseId));
+        setExpenses((prev) =>
+          prev.filter((item) => !idsToDelete.includes(item.id)),
+        );
       } catch (err) {
         console.error("Erro ao deletar despesa: ", err);
         alert("Não foi possível deletar despesa.");
       }
     },
-    [session],
+    [session, expenses],
   );
 
   const updateExpense = useCallback(
@@ -237,15 +258,6 @@ export default function App() {
     },
     [session],
   );
-
-  // ── Filtros ──
-
-  const selectedMonth = "2026-08";
-  const montlhyExpenses = useMemo(() => {
-    return expenses.filter((expense) => {
-      return expense.date.startsWith(selectedMonth);
-    });
-  }, [expenses, selectedMonth]);
 
   // ── CRUD: People ──
   const addPerson = useCallback(
