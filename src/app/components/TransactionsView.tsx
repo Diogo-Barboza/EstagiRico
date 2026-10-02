@@ -7,6 +7,7 @@ import {
   Users,
   ChevronDown,
   Check,
+  Share2,
 } from "lucide-react";
 import {
   getCycleOptions,
@@ -22,6 +23,7 @@ import type { Expense, Person } from "../../lib/types";
 import { Avatar } from "./Avatar";
 import { DonutCenter } from "./DonutCenter";
 import { EditExpenseModal } from "./EditExpenseModal";
+import { ShareAuditModal } from "./ShareAuditModal";
 
 interface TransactionsViewProps {
   expenses: Expense[];
@@ -41,6 +43,7 @@ export function TransactionsView({
   onDelete,
 }: TransactionsViewProps) {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [sharingPerson, setSharingPerson] = useState<Person | null>(null);
   const [selectedOffset, setSelectedOffset] = useState<number>(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -497,6 +500,14 @@ export function TransactionsView({
                     >
                       {fmtCurrency(amount)}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setSharingPerson(person)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7B7F94] hover:text-[#6B5FD8] hover:bg-[#EDEBFC] transition-colors cursor-pointer"
+                      title={`Gerar link de auditoria para ${person.name}`}
+                    >
+                      <Share2 size={14} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -522,6 +533,17 @@ export function TransactionsView({
             setEditingExpense(null);
           }}
           onDelete={onDelete}
+        />
+      )}
+
+      {/* Share Audit Modal */}
+      {sharingPerson && (
+        <ShareAuditModal
+          person={sharingPerson}
+          expenses={expenses}
+          closingDay={closingDay}
+          initialOffset={selectedOffset}
+          onClose={() => setSharingPerson(null)}
         />
       )}
     </div>

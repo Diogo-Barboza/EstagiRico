@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { Plus, X, Wallet, Trash2, Loader2 } from "lucide-react";
+import { Plus, X, Wallet, Trash2, Loader2, Share2 } from "lucide-react";
 import { PERSON_COLORS } from "../../lib/constants";
 import { getCurrentCycleDates, isInCycle, fmtCurrency } from "../../lib/utils";
 import type { Person, Expense } from "../../lib/types";
 import { Avatar } from "./Avatar";
+import { ShareAuditModal } from "./ShareAuditModal";
 
 interface PeopleViewProps {
   people: Person[];
@@ -25,6 +26,7 @@ export function PeopleView({
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState(PERSON_COLORS[0]);
+  const [sharingPerson, setSharingPerson] = useState<Person | null>(null);
 
   const cycle = useMemo(() => getCurrentCycleDates(closingDay), [closingDay]);
   const cycleExp = useMemo(
@@ -214,16 +216,37 @@ export function PeopleView({
                     <p className="text-xs text-[#9BA3AF]">Quitado ✓</p>
                   )}
                 </div>
-                <button
-                  onClick={() => onDelete(person.id)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[#C8CADB] hover:text-[#D85F5F] hover:bg-[#FCEAEA] transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => setSharingPerson(person)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7B7F94] hover:text-[#6B5FD8] hover:bg-[#EDEBFC] transition-colors cursor-pointer"
+                    title="Gerar link de auditoria (24h)"
+                  >
+                    <Share2 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(person.id)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#C8CADB] hover:text-[#D85F5F] hover:bg-[#FCEAEA] transition-colors cursor-pointer"
+                    title="Remover pessoa"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {sharingPerson && (
+        <ShareAuditModal
+          person={sharingPerson}
+          expenses={expenses}
+          closingDay={closingDay}
+          onClose={() => setSharingPerson(null)}
+        />
       )}
     </div>
   );
