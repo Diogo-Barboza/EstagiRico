@@ -15,6 +15,7 @@ import { AddExpense } from "./components/AddExpense";
 import { PeopleView } from "./components/PeopleView";
 import { SettingsView } from "./components/SettingsView";
 import { TransactionsView } from "./components/TransactionsView";
+import { PublicAuditView } from "./components/PublicAuditView";
 
 const VIEW_TITLE: Record<View, string> = {
   dashboard: "Visão Geral",
@@ -25,6 +26,17 @@ const VIEW_TITLE: Record<View, string> = {
 };
 
 export default function App() {
+  // ── Public Audit Token (Issue #6) ──
+  const [auditToken, setAuditToken] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = params.get("audit");
+    if (fromQuery) return fromQuery;
+    if (window.location.hash.startsWith("#/audit/")) {
+      return window.location.hash.slice(9);
+    }
+    return null;
+  });
+
   // ── Auth state ──
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -346,6 +358,18 @@ export default function App() {
   }, []);
 
   // ── Render ──
+  if (auditToken) {
+    return (
+      <PublicAuditView
+        token={auditToken}
+        onExit={() => {
+          setAuditToken(null);
+          window.history.replaceState(null, "", window.location.pathname);
+        }}
+      />
+    );
+  }
+
   if (authLoading) return <LoadingScreen />;
   if (!session) return <AuthScreen onAuth={() => {}} />;
   if (dataLoading) return <LoadingScreen />;
