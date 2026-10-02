@@ -1,3 +1,5 @@
+import type { Expense } from "./types";
+
 /**
  * Calculates the current billing cycle dates.
  *
@@ -145,4 +147,68 @@ export function addMonthsToDate(dateStr: string, months: number): string {
   return `${targetYear}-${pad(targetMonth)}-${pad(targetDay)}`;
 }
 
+export interface ParsedInstallmentTitle {
+  baseTitle: string;
+  installmentNumber: number;
+  installmentsCount: number;
+}
 
+export function parseInstallmentTitle(
+  title: string,
+): ParsedInstallmentTitle | null {
+  const match = title.match(/^(.*?)\s*\((\d+)\/(\d+)\)$/);
+  if (!match) return null;
+  return {
+    baseTitle: match[1].trim(),
+    installmentNumber: parseInt(match[2], 10),
+    installmentsCount: parseInt(match[3], 10),
+  };
+}
+
+/**
+ * Given a target installment expense and all expenses, finds all expense IDs
+ * corresponding to this installment and the ones from following months.
+ */
+export function getRelatedFollowingInstallmentIds(
+  targetExpense: Expense,
+  allExpenses: Expense[],
+): string[] {
+  const parsedTarget = parseInstallmentTitle(targetExpense.title);
+  if (!parsedTarget) {
+    return [targetExpense.id];
+  }
+
+  const { baseTitle, installmentNumber, installmentsCount } = parsedTarget;
+
+  const matches = allExpenses.filter((e) => {
+    // Must belong to the same category and payee
+    if (e.category !== targetExpense.category) return false;
+    if (e.payeeType !== targetExpense.payeeType) return false;
+    if (e.payeeId !== targetExpense.payeeId) return false;
+
+    // Amount check with 0.05 tolerance for cent rounding in installment splits
+    if (Math.abs(e.amount - targetExpense.amount) > 0.05) return false;
+
+    const parsed = parseInstallmentTitle(e.title);
+    if (!parsed) return false;
+
+    // Must match base title (case-insensitive) and total installment count
+    const isSameGroup =
+      parsed.baseTitle.toLowerCase() === baseTitle.toLowerCase() &&
+      parsed.installmentsCount === installmentsCount;
+
+    if (!isSameGroup) return false;
+
+    // Must be the current installment or subsequent installment (following months)
+    return (
+      parsed.installmentNumber >= installmentNumber &&
+      e.date >= targetExpense.date
+    );
+  });
+
+  if (matches.length === 0) {
+    return [targetExpense.id];
+  }
+
+  return matches.map((e) => e.id);
+}
